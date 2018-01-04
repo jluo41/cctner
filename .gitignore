@@ -74,7 +74,6 @@ redis-stable
 app/static/upload/temp
 
 # tmp dictionary
-tmp/
 
 
 # python temp files
