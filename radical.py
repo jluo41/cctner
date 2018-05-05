@@ -18,8 +18,8 @@ headers = {
 }
 
 
-rootPath = '/Users/floyd/Desktop/Research/NER-CRF/cctner/'
-
+# rootPath = '/Users/floyd/Desktop/Research/NER-CRF/cctner/'
+rootPath = ''
 
 class Radical(object):
     dictionary_filepath = rootPath + 'sources/xinhua.csv'
