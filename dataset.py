@@ -1,29 +1,63 @@
 import os
 
-batch1 = dict(name = 'CCKS',
-              dataInput = dict(rootPath = '/Users/floyd/Desktop/Research/NER-CRF/cctner/', 
-              fpath = 'dataset/annoted/batch1/',
-              filenames= ['一般项目', '病史特点', '诊疗经过', '出院情况'],
-              orig_iden = '.txtoriginal.txt',
-              anno_iden = '.txt'),
-              dataAnno = dict(sep = '\t',
-                              fLabel = {'症状和体征': 'Sy','身体部位': 'Bo',
-                                        '检查和检验': 'Ch','治疗': 'Tr', '疾病和诊断': 'Si'},
-                              start = 0))
+batch_CCKS = dict(name = 'ccks',
+                  dataInput = dict(rootPath = '', 
+                                   fpath = 'dataset/ccks/',
+                                   filenames= ['一般项目', '病史特点', '诊疗经过', '出院情况'],
+                                   orig_iden = '.txtoriginal.txt',
+                                   anno_iden = '.txt'),
+                                   dataAnno = dict(sep = '\t',
+                                                   fLabel = {'症状和体征': 'Sy',
+                                                             '身体部位': 'Bo',
+                                                             '检查和检验': 'Ch',
+                                                             '治疗': 'Tr', 
+                                                             '疾病和诊断': 'Si'},
+                                                   start = 0))
 
 
-batch2 = dict(name = 'LUOHU',
-              dataInput = dict(rootPath = '/Users/floyd/Desktop/Research/NER-CRF/cctner/',
-              fpath = 'dataset/annoted/batch2/',
-              filenames= ['text'],
-              orig_iden = '.txt',
-              anno_iden = '_StandardFormat.txt'),
-              dataAnno = dict(sep = '\t',
-                              fLabel = {'症状': 'Sy', '身体部位以及器官': 'Bo',
-                                        '检查项目': 'Ch',
-                                        '治疗手段': 'Tr', '疾病名称': 'Si','疾病类型': 'DT',
-                                        '不确定'  : 'unct' },
-                              start = 1))
+batch_LUOHU = dict(name = 'luohu',
+                   dataInput = dict(rootPath = '',
+                                    fpath = 'dataset/luohu/',
+                                    filenames= ['text'],
+                                    orig_iden = '.txt',
+                                    anno_iden = '_StandardFormat.txt'),
+                                    dataAnno = dict(sep = '\t',
+                                                    fLabel = {'症状': 'Sy', 
+                                                              '身体部位以及器官': 'Bo',
+                                                              '检查项目': 'Ch',
+                                                              '治疗手段': 'Tr', 
+                                                              '疾病名称': 'Si',
+                                                              '疾病类型': 'DT',
+                                                              '不确定'  : 'unct' },
+                                                     start = 1))
+# TODO
+batch_LH_M = dict(name = 'luohuM',
+                  dataInput = dict(rootPath = '',
+                                   fpath = 'dataset/luohuM/',
+                                   filenames= ['text'],
+                                   orig_iden = '.txt',
+                                   anno_iden = '_LabeledEntity.txt'),
+                                   dataAnno = dict(sep = '\t',
+                                                   fLabel =  {'Symptom': 'Sy', 
+                                                              'Test': 'Te',
+                                                              '治疗手段': 'Tr', 
+                                                              'DiseaseName': 'DN',
+                                                              '疾病类型': 'DT',
+                                                              '不确定'  : 'unct' },
+                                                   start = 1))
+
+# TODO
+batch_LH_A = dict(name = 'luohuA',
+                  dataInput = dict(rootPath = '',
+                                   fpath = 'dataset/luohuA/',
+                                   filenames= ['text'],
+                                   orig_iden = '.txt',
+                                   anno_iden = '_LabeledEntity.txt'),
+                                   dataAnno = dict(sep = '\t',
+                                                   fLabel =  {'主体': 'A'},
+                                                   start = 1))
+
+
 
 
 def generateOriAn(fpath, filenames, orig_iden, anno_iden, rootPath):
