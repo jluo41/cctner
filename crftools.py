@@ -41,25 +41,10 @@ def crf_learn(crf_learn_path = 'crftools/crf_learn',
         part_args += dict2list(params)
     part_args += [templatepath, trainpath, modelname]
     try:
-        shell_invoke(crf_learn_path + part_args)
+        shell_invoke([crf_learn_path] + part_args)
     except:
-        shell_invoke('crf_learn' + part_args)
+        shell_invoke(['crf_learn'] + part_args)
 
-
-def crf_test(crf_test_path = 'crftools/crf_test',
-             modelpath = None,
-             testfilepath = None,
-             resultpath = None):
-
-    if (not modelpath) or (not testfilepath) or (not resultpath):
-        return
-
-    part_args = ['-v', '2', '-m', modelpath, testfilepath]
-    with open(resultpath, 'w') as fh_write:
-        try:
-            shell_invoke([crf_test_path] + part_args, soutput = fh_write)
-        except:
-            shell_invoke(['crf_test'] + part_args, soutput = fh_write)
 
 
 
