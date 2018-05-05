@@ -6,27 +6,17 @@ import numpy as np
 from splitresult import splitResult
 
 from vector import cct2VecDF
+from dataset import batch_CCKS, batch_LUOHU, batch_LH_M, batch_LH_A, generateOriAn
 
 
-#filename = ['text']
-#types    = ['text']
-
-
-filename = ['01-一般项目/一般项目-',
-            '02-病史特点/病史特点-',
-            '04-诊疗经过/诊疗经过-',
-            '05-出院情况/出院情况-']
-
-types = [item.split('/')[-1].replace('-', '') for item in filename]
-
-def loadData(pklDictPath, seed):
+def loadData(pklDictPath, seed, batch):
     with open(pklDictPath, 'rb') as handle:
         cctDict_R = pickle.load(handle)
     
     cctTrain = []
     cctTest  = []
     n = 0
-    for t in types:
+    for t in batch['dataInput']['filenames']:
         n+=1
         typeCCT_R = cctDict_R[t]
         random.seed(n*seed)
@@ -115,10 +105,13 @@ def getTestData2(TempPath,
                      index = False )
 
 if __name__ == '__main__':
-    pklDictPath = 'pkldata/2017-11-03/R_CCT_Dict.p'
+    batch =batch_LUOHU
+    pklDictPath = 'pkldata/luohu/CCT_Dict.p'
+
     btime = time.clock()
-    cctTrain, cctTest = loadData(pklDictPath, 1)
+    cctTrain, cctTest = loadData(pklDictPath, 1, batch)
     etime = time.clock()
+
     print(etime - btime)
     print([len(i) for i in cctTrain])
     print([len(i) for i in cctTest])

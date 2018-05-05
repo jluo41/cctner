@@ -172,6 +172,8 @@ class ChineseClinicalText(object):
         with open(annotedFilePath, 'r') as f:
             for l in f.readlines():
                 entity = strQ2B(l).replace('\n','').split(sep)
+                if len(entity) != 4:
+                    continue
                 entity[-1] = fLabel[entity[-1]]
                 entity[1], entity[2] = int(entity[1])-start, int(entity[2])-start
                 annotedEntities.append(entity)

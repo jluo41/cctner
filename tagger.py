@@ -8,29 +8,14 @@ import numpy as np
 import pandas as pd
 
 
-from dataset import batch1, batch2
+from dataset import batch_CCKS, batch_LUOHU, batch_LH_M, batch_LH_A, generateOriAn
+
 from text import ChineseClinicalText as CCT
 from crftools import crf_test
 
 from tabulate import tabulate
 
-
-parser = optparse.OptionParser()
-
-parser.add_option(
-    "-m", "--model", default='1abdp',
-    help="Model name"
-)
-
-parser.add_option(
-    "-i", "--input", default="",
-    help="Input file location"
-)
-
-parser.add_option(
-    "-o", "--output", default="",
-    help="Output file location"
-)
+from vector import cct2VecDF
 
 def tagger(model, inputPathFile, outputPathFile, batch):
 
@@ -39,7 +24,7 @@ def tagger(model, inputPathFile, outputPathFile, batch):
     tmp = inputPathFile.split('/')[-1]
     fileName = tmp.split('.')[0]
 
-    with open(rootMPath + model + '/para.p', 'rb') as handle:
+    with open('models/' + batch['name'] + '/'+ model + '/para.p', 'rb') as handle:
         para = pickle.load(handle)
 
     if para['arch'] == 1:
@@ -50,7 +35,22 @@ def tagger(model, inputPathFile, outputPathFile, batch):
         tmpInput  = 'demo/tmp/' + model + '-'+ fileName + '-Test' + '.txt'
         tmpOutput = 'demo/tmp/' + model + '-'+ fileName + '-Rslt' + '.txt'
 
-        cct.toTextFile(tmpInput, cols = para['cols'])
+        if not para['vect']['Vector']:
+            cct.toTextFile(tmpInput, cols = para['cols'])
+        else:
+            cct.outputCols = para['cols']
+            df = cct.dfFormat.copy()
+            df = df.dropna()
+            df.loc[len(df)] = np.NaN    ## Trick Here
+            df = df[para['cols']]
+
+            df_vec = cct2VecDF(cct, dim = para['vect']['Vdim'], path = para['vect']['vect_path'])
+            df_vec = df_vec.dropna()
+            df_vec.loc[len(df_vec)] = np.NaN
+
+            df = pd.concat([df, df_vec], axis = 1)
+            df = df[  para['cols'] + para['vect']['vect_cols'] ]
+            df.to_csv(tmpInput, sep = '\t', encoding = 'utf=8', header = False, index = False )
 
         crf_test(crf_test_path = para['crf_testPath'],
                  modelpath     = para['modelPath'],
@@ -58,7 +58,8 @@ def tagger(model, inputPathFile, outputPathFile, batch):
                  resultpath    = tmpOutput)
 
         result = pd.read_csv(tmpOutput, sep = '\t', comment = '#', header= None, skip_blank_lines= False)
-
+        
+        cct.outputCols = para['eval_cols']
         cct.corpResult(result, 'LearnedETag')
 
         print('Text Input:')
@@ -132,35 +133,58 @@ def tagger(model, inputPathFile, outputPathFile, batch):
 
 
 
+parser = optparse.OptionParser()
+
+parser.add_option(
+    "-m", "--model", default='1abdp',
+    help="Model name"
+)
+
+parser.add_option(
+    "-i", "--input", default="",
+    help="Input file location"
+)
+
+parser.add_option(
+    "-o", "--output", default="",
+    help="Output file location"
+)
+
+parser.add_option(
+    "-b", "--batch", default="ccks",
+    help="batch name"
+)
+
+
 if __name__ == '__main__':
     opts = parser.parse_args()[0]
 
-    # Check parameters validity
-    # assert opts.delimiter
-    # print(opts.model)
-    # print(os.path.isdir(opts.model))
-    # assert os.path.isdir(opts.model)
     assert os.path.isfile(opts.input)
 
-    # Load existing model
-    # model = Model(model_path=opts.model)
-    # parameters = model.parameters
-    rootMPath = 'models/'
     model = opts.model 
     inputPathFile = opts.input
     outputPathFile = opts.output
-    tagger(model, inputPathFile, outputPathFile, batch1)
 
+    assert opts.batch in ['ccks', 'luohu', 'luohuA', 'luohuB']
 
+    batch = None
+    if opts.batch == 'ccks':
+        batch = batch_CCKS
+        print('Batch CCKS \n')
 
+    elif opts.batch == 'luohu':
+        batch = batch_LUOHU
+        print('Batch LUOHU\n' )
 
+    elif opts.batch == 'luohuA':
+        batch = batch_LH_A
+        print('Batch LUOHU Antonomy\n')
 
+    elif opts.batch == 'luohuM':
+        batch = batch_LH_M
+        print('Batch LUOHU Miscellany\n')
 
-
-
-
-
-
-
-
-
+    else:
+        pass
+    
+    tagger(model, inputPathFile, outputPathFile, batch)

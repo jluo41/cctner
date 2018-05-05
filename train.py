@@ -6,6 +6,8 @@ import time
 from evals import evalPerform
 import pickle
 # from splitresult import splitResult
+from dataset import batch_CCKS, batch_LUOHU, batch_LH_M, batch_LH_A, generateOriAn
+
 
 attrLable = {}
 attrLable['a'] = '_atom'
@@ -16,12 +18,12 @@ attrLable['p'] = 'POSTag'
 attrLable['R'] = 'RTag'
 attrLable['E'] = 'ETag'
 
-def genPara(modelLabel, vect = None, lstm = None):
+def genPara(modelLabel, vect = None, lstm = None, batch = None):
     para = {}
     para['arch']  = int(modelLabel[0])
     para['attrs'] = list(modelLabel)[1:]
     para['cols']  = [attrLable[i] for i in para['attrs']]
-    para['path']  = 'models/'+ modelLabel
+    para['path']  = 'models/' + batch['name'] + '/' + modelLabel
     para['crf_learnPath'] = 'crftools/crf_learn'
     para['crf_testPath']  = 'crftools/crf_test'
     ## CRF Para
@@ -40,7 +42,7 @@ def genPara(modelLabel, vect = None, lstm = None):
     templatePath[4] = [p + 'templateFor5Tag']
     templatePath['v']=[p + 'template-v51']
     
-    para['vect'] = {}
+    para['vect'] = {'Vector': False}
     if vect:
         para['vect']['Vector']   = True
         para['vect']['Vdim']     = int(vect.replace('vect-',''))
@@ -49,7 +51,7 @@ def genPara(modelLabel, vect = None, lstm = None):
         
         para['path'] += '-v'+str(para['vect']['Vdim'])
         
-    para['lstm'] ={}
+    para['lstm'] ={'LSTM': False}
     if lstm:
         pass
     
@@ -95,7 +97,7 @@ def genPara(modelLabel, vect = None, lstm = None):
     return para
 
 
-def trainModel(para, pklDictPath):
+def trainModel(para, pklDictPath, batch):
     try:
         os.mkdir(para['path'])
         os.mkdir(para['path']+ '/output')
@@ -103,7 +105,7 @@ def trainModel(para, pklDictPath):
         pass
 
     print('\nLoading Data\n')
-    cctTrain, cctTest = loadData(pklDictPath, 10)
+    cctTrain, cctTest = loadData(pklDictPath, 10, batch)
     if para['arch'] == 1:
         print('Loading Train Data\n')
         getTrainData(cctTrain, attr_cols = para['cols'], tag_cols = para['tag_cols'], Path = para['trainDataPath'],
@@ -228,30 +230,69 @@ def trainModel(para, pklDictPath):
 
 
 if __name__ == '__main__':
-    pklDictPath = 'pkldata/CCKS-2018-04-04/CCT_Dict.p'
+    
 
     parser = optparse.OptionParser()
     parser.add_option("-m", "--model", default='',
                       help="Model Name")
     parser.add_option("-v", "--vector", default = '',
                       help='Word2Vector Dim')
+    parser.add_option("-b", "--batch", default = 'ccks',
+                      help='batch')
 
     opts = parser.parse_args()[0]
 
     modelLabel = opts.model
     vect       = opts.vector
+
+
     #lstm       = opts.lstm
     # modelLabel = '1abdp'
 
     assert int(modelLabel[0]) == 2 or int(modelLabel[0]) == 1
     assert modelLabel[1] == 'a'
+    
 
     if vect:
         assert vect[:5] == 'vect-'
 
-    para = genPara(modelLabel, vect = vect)
 
-    trainModel(para, pklDictPath)
+    assert opts.batch in ['ccks', 'luohu', 'luohuA', 'luohuB']
 
+    batch = None
+    pklDictPath = None
+    if opts.batch == 'ccks':
+        batch = batch_CCKS
+        pklDictPath = 'pkldata/ccks/CCT_Dict.p'
+        print('Batch CCKS \n')
 
+    elif opts.batch == 'luohu':
+        batch = batch_LUOHU
+        pklDictPath = 'pkldata/luohu/CCT_Dict.p'
+        print('Batch LUOHU\n' )
+
+    elif opts.batch == 'luohuA':
+        batch = batch_LH_A
+        pklDictPath = 'pkldata/luohuA/CCT_Dict.p'
+        print('Batch LUOHU Antonomy\n')
+
+    elif opts.batch == 'luohuM':
+        batch = batch_LH_M
+        pklDictPath = 'pkldata/luohuM/CCT_Dict.p'
+        print('Batch LUOHU Miscellany\n')
+
+    else:
+        pass
+
+    #print(modelLabel)
+    #print(batch)
+    #print(pklDictPath)
+    para = genPara(modelLabel, vect = vect, batch = batch)
+    
+    try:
+        os.mkdir('models/'+batch['name'])
+    except:
+        pass
+
+    trainModel(para, pklDictPath, batch)
 
