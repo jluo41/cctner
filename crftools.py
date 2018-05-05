@@ -31,17 +31,36 @@ def shell_invoke(args, sinput = None, soutput = None):
 
 
 def crf_learn(crf_learn_path = 'crftools/crf_learn',
-              params         = None,
-              templatepath   = './template/template01',
-              trainpath      = 'demotraingold',
-              modelname      = 'tmptest'):
+              params = None,
+              templatepath = 'template/template01',
+              trainpath = 'demotraingold',
+              modelname = 'tmptest'):
 
-    args = [crf_learn_path]
+    part_args = []
     if params:
-        args += dict2list(params)
-    args += [templatepath, trainpath, modelname]
-    # print(args)
-    shell_invoke(args)
+        part_args += dict2list(params)
+    part_args += [templatepath, trainpath, modelname]
+    try:
+        shell_invoke(crf_learn_path + part_args)
+    except:
+        shell_invoke('crf_learn' + part_args)
+
+
+def crf_test(crf_test_path = 'crftools/crf_test',
+             modelpath = None,
+             testfilepath = None,
+             resultpath = None):
+
+    if (not modelpath) or (not testfilepath) or (not resultpath):
+        return
+
+    part_args = ['-v', '2', '-m', modelpath, testfilepath]
+    with open(resultpath, 'w') as fh_write:
+        try:
+            shell_invoke([crf_test_path] + part_args, soutput = fh_write)
+        except:
+            shell_invoke(['crf_test'] + part_args, soutput = fh_write)
+
 
 
 def crf_test(crf_test_path = 'crftools/crf_learn',
@@ -54,13 +73,26 @@ def crf_test(crf_test_path = 'crftools/crf_learn',
         return
 
     if not concise: 
-        args = [crf_test_path, '-v', '2', '-m', modelpath, testfilepath]
+        #part_args = ['-v', '2', '-m', modelpath, testfilepath]
+
+        part_args = ['-v', '2', '-m', modelpath, testfilepath]
         with open(resultpath, 'w') as fh_write:
-            shell_invoke(args, soutput = fh_write)
+            try:
+                shell_invoke([crf_test_path] + part_args, soutput = fh_write)
+            except:
+                shell_invoke(['crf_test'] + part_args, soutput = fh_write)
+
+        
     else:
-        args = [crf_test_path, '-m', modelpath, testfilepath]
+        part_args = ['-m', modelpath, testfilepath]
+        
         with open(resultpath, 'w') as fh_write:
-            shell_invoke(args, soutput = fh_write)
+            try:
+                shell_invoke([crf_test_path] + part_args, soutput = fh_write)
+            except:
+                shell_invoke(['crf_test'] + part_args, soutput = fh_write)
 
+# UPDATE: 2018/03/14, Add concise argument.
 
-# UPDATE: 2018/03/14, Ass concise argument.
+# UPDATE: 2018/05/04, For Linxu.
+
