@@ -1,5 +1,3 @@
-
-
 import os
 import time
 import codecs
@@ -7,13 +5,14 @@ import optparse
 import pickle
 
 import numpy as np
-from pandas import read_csv
-# from loader import prepare_sentence
-# from utils import create_input, iobes_iob, zero_digits
-# from model import Model
+import pandas as pd
 
+
+from dataset import batch1, batch2
 from text import ChineseClinicalText as CCT
 from crftools import crf_test
+
+from tabulate import tabulate
 
 
 parser = optparse.OptionParser()
@@ -33,11 +32,9 @@ parser.add_option(
     help="Output file location"
 )
 
-def tagger(model, inputPathFile, outputPathFile):
+def tagger(model, inputPathFile, outputPathFile, batch):
 
-    
-
-    cct = CCT(originalFilePath=inputPathFile)
+    cct = CCT(originalFilePath=inputPathFile, batch = batch)
     cct.execute()
     tmp = inputPathFile.split('/')[-1]
     fileName = tmp.split('.')[0]
@@ -50,19 +47,19 @@ def tagger(model, inputPathFile, outputPathFile):
         print("Loading Model...")
         btime = time.clock()
 
-        tmpInput  = 'demo/tmp/' + model + fileName + '-Test' + '.txt'
-        tmpOutput = 'demo/tmp/' + model + fileName + '-Rslt' + '.txt'
+        tmpInput  = 'demo/tmp/' + model + '-'+ fileName + '-Test' + '.txt'
+        tmpOutput = 'demo/tmp/' + model + '-'+ fileName + '-Rslt' + '.txt'
 
-        cct.toTextFile(tmpInput, cols = para['testCols'])
+        cct.toTextFile(tmpInput, cols = para['cols'])
 
-        crf_test(crf_test_path = para['testPath'],
+        crf_test(crf_test_path = para['crf_testPath'],
                  modelpath     = para['modelPath'],
                  testfilepath  = tmpInput,
                  resultpath    = tmpOutput)
 
-        result = read_csv(tmpOutput, sep = '\t', comment = '#', header= None, skip_blank_lines= False)
+        result = pd.read_csv(tmpOutput, sep = '\t', comment = '#', header= None, skip_blank_lines= False)
 
-        cct.coporResult(result, 'ETag')
+        cct.corpResult(result, 'LearnedETag')
 
         print('Text Input:')
         print('--------------------------')
@@ -72,12 +69,12 @@ def tagger(model, inputPathFile, outputPathFile):
                 
         etime = time.clock()
     
-        with open(outputPathFile, 'w', encoding = 'utf-8') as f:
-            for en in cct.getLearnedEntities('ETag'):
-                f.write('\t'.join([str(i) for i in en])+'\n')
+        columns = ['E-Name', 'E-Start', 'E-End', 'E-Type']
+        Data = pd.DataFrame(cct.getLearnedEntities('LearnedETag'), columns= columns )
+        Data.to_csv(outputPathFile, sep = '\t')
         
         print('Entity Result:\n')
-        print(read_csv(outputPathFile, sep = '\t', header = None))
+        print(tabulate(Data,headers=Data.columns,tablefmt="psql", numalign="left"))
         print('\nTime Consumption %f s' % (etime - btime))
 
 
@@ -86,30 +83,34 @@ def tagger(model, inputPathFile, outputPathFile):
         print("Loading 1 Layer Model...")
         btime = time.clock()
 
-        tmpInput1  = 'demo/tmp/' + model + fileName + '-1Test' + '.txt'
-        tmpOutput1 = 'demo/tmp/' + model + fileName + '-1Rslt' + '.txt'
+        tmpInput1  = 'demo/tmp/' + model + '-' + fileName + '-1Test' + '.txt'
+        tmpOutput1 = 'demo/tmp/' + model + '-' + fileName + '-1Rslt' + '.txt'
 
-        cct.toTextFile(tmpInput1, cols = para['testCols1'])
+        cct.toTextFile(tmpInput1, cols = para['cols'])
 
-        crf_test(crf_test_path = para['testPath'],
+        crf_test(crf_test_path = para['crf_testPath'],
                  modelpath     = para['modelPath1'],
                  testfilepath  = tmpInput1,
-                 resultpath    = tmpOutput1)
+                 resultpath    = tmpOutput1,
+                 concise       = True)
 
-        result = read_csv(tmpOutput1, sep = '\t', comment = '#', header= None, skip_blank_lines= False)
-        cct.coporResult(result, 'RTag')
+        result = pd.read_csv(tmpOutput1, sep = '\t', comment = '#', header= None, skip_blank_lines= False)
+        # cct.corpResult(result, 'RTag')
 
-        tmpInput2  = 'demo/tmp/' + model + fileName + '-2Test' + '.txt'
-        tmpOutput2 = 'demo/tmp/' + model + fileName + '-2Rslt' + '.txt'
-        cct.toTextFile(tmpInput2, cols = para['testCols2'])
+        tmpInput2  = 'demo/tmp/' + model + '-' + fileName + '-2Test' + '.txt'
+        tmpOutput2 = 'demo/tmp/' + model + '-' + fileName + '-2Rslt' + '.txt'
 
-        crf_test(crf_test_path = para['testPath'],
+        pd.read_csv(tmpOutput1, sep = '\t', header = None).to_csv(tmpInput2, sep = '\t', header = None, index=None)
+        # cct.toTextFile(tmpInput2, cols = para['testCols2'])
+
+        crf_test(crf_test_path = para['crf_testPath'],
                  modelpath     = para['modelPath2'],
                  testfilepath  = tmpInput2,
                  resultpath    = tmpOutput2)
 
-        result = read_csv(tmpOutput2, sep = '\t', comment = '#', header= None, skip_blank_lines= False)
-        cct.coporResult(result, 'ETag')
+        result = pd.read_csv(tmpOutput2, sep = '\t', comment = '#', header= None, skip_blank_lines= False)
+        cct.outputCols = para['eval_cols']
+        cct.corpResult(result, 'LearnedETag')
 
         print('Text Input:')
         print('--------------------------')
@@ -121,12 +122,12 @@ def tagger(model, inputPathFile, outputPathFile):
 
         print('\nTime Consumption %f s' % (etime - btime))
 
-        with open(outputPathFile, 'w', encoding = 'utf-8') as f:
-            for en in cct.getLearnedEntities('ETag'):
-                f.write('\t\t'.join([str(i) for i in en])+'\n')
-
+        columns = ['E-Name', 'E-Start', 'E-End', 'E-Type']
+        Data = pd.DataFrame(cct.getLearnedEntities('LearnedETag'), columns= columns )
+        Data.to_csv(outputPathFile, sep = '\t')
+        
         print('Entity Result:\n')
-        print(read_csv(outputPathFile, sep = '\t', header = None))
+        print(tabulate(Data,headers=Data.columns,tablefmt="psql", numalign="left"))
         print('\nTime Consumption %f s' % (etime - btime))
 
 
@@ -148,7 +149,7 @@ if __name__ == '__main__':
     model = opts.model 
     inputPathFile = opts.input
     outputPathFile = opts.output
-    tagger(model, inputPathFile, outputPathFile)
+    tagger(model, inputPathFile, outputPathFile, batch1)
 
 
 
