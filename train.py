@@ -85,7 +85,7 @@ def genPara(modelLabel, vect = None, lstm = None):
 
         para['modelPath1'] = para['path'] + '/model1'
         para['modelPath2'] = para['path'] + '/model2'
-        para['evalTag']   = 'ETag'
+        para['evalTag']   = 'LearnedETag'
         para['template1'] = templatePath[len(para['cols'])][0]
         para['template2'] = templatePath[len(para['cols']) + 1][0]
         if vect:
