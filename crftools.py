@@ -4,8 +4,6 @@ import pandas as pd
 console_encoding = 'gb2312'
 file_encoding = 'utf-8'
 
-
-
 def dict2list(paramdict):
     resultlist = []
     for k, v in paramdict.items():
@@ -42,19 +40,27 @@ def crf_learn(crf_learn_path = 'crftools/crf_learn',
     if params:
         args += dict2list(params)
     args += [templatepath, trainpath, modelname]
+    # print(args)
     shell_invoke(args)
 
 
 def crf_test(crf_test_path = 'crftools/crf_learn',
              modelpath     = None,
              testfilepath  = None,
-             resultpath    = None):
+             resultpath    = None,
+             concise       = False):
 
     if (not modelpath) or (not testfilepath) or (not resultpath):
         return
 
-    args = [crf_test_path, '-v', '2', '-m', modelpath, testfilepath]
-    with open(resultpath, 'w') as fh_write:
-        shell_invoke(args, soutput = fh_write)
+    if not concise: 
+        args = [crf_test_path, '-v', '2', '-m', modelpath, testfilepath]
+        with open(resultpath, 'w') as fh_write:
+            shell_invoke(args, soutput = fh_write)
+    else:
+        args = [crf_test_path, '-m', modelpath, testfilepath]
+        with open(resultpath, 'w') as fh_write:
+            shell_invoke(args, soutput = fh_write)
 
 
+# UPDATE: 2018/03/14, Ass concise argument.
