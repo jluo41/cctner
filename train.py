@@ -16,22 +16,19 @@ attrLable['p'] = 'POSTag'
 attrLable['R'] = 'RTag'
 attrLable['E'] = 'ETag'
 
-
-def genPara(modelLabel):
+def genPara(modelLabel, vect = None, lstm = None):
     para = {}
     para['arch']  = int(modelLabel[0])
     para['attrs'] = list(modelLabel)[1:]
     para['cols']  = [attrLable[i] for i in para['attrs']]
     para['path']  = 'models/'+ modelLabel
-    para['performPath']   = para['path'] + '/peformance.txt'
-    para['paraPath']  = para['path'] + '/para.p'
-    para['learnPath'] = 'crftools/crf_learn'
-    para['testPath']  = 'crftools/crf_test'
+    para['crf_learnPath'] = 'crftools/crf_learn'
+    para['crf_testPath']  = 'crftools/crf_test'
     ## CRF Para
     learn_params2 = {'-f': '2',
-                 '-c': '5.0',
-                 '-t': None,
-                 '-p': '4'}
+                     '-c': '5.0',
+                     '-t': None,
+                     '-p': '4'}
     para['crfPara'] = learn_params2
 
     ## CRF Template
@@ -41,22 +38,43 @@ def genPara(modelLabel):
     templatePath[2] = [p + 'template01', p + 'template1' ]
     templatePath[3] = [p + 'template11']
     templatePath[4] = [p + 'templateFor5Tag']
+    templatePath['v']=[p + 'template-v51']
     
+    para['vect'] = {}
+    if vect:
+        para['vect']['Vector']   = True
+        para['vect']['Vdim']     = int(vect.replace('vect-',''))
+        para['vect']['vect_cols']= list(range(1,para['vect']['Vdim'] + 1))
+        para['vect']['vect_path']= 'vector/'+ vect + '.txt'
+        
+        para['path'] += '-v'+str(para['vect']['Vdim'])
+        
+    para['lstm'] ={}
+    if lstm:
+        pass
+    
+    para['performPath']   = para['path'] + '/peformance.txt'
+    para['logPath']  = para['path'] + '/logError.csv'
+    para['paraPath']  = para['path'] + '/para.p'
+    para['eval_cols'] = para['cols'].copy()
+
     if para['arch'] == 1:
-        para['trainCols'] = para['cols'] + ['ETag']
-        para['testCols']  = para['cols']
+        para['tag_cols'] = ['ETag']
         para['trainDataPath'] = para['path'] + '/output/trainData.txt'
         para['testDataPath']  = para['path'] + '/output/testData.txt'
         para['testDataResultPath'] = para['path'] + '/output/testDataResult.txt'
         para['modelPath'] = para['path'] + '/model'
-        para['evalTag']   = 'ETag'
+        para['evalTag']   = 'LearnedETag'
         para['template'] = templatePath[len(para['attrs'])][0]
+        if vect:
+            para['template'] = templatePath['v'][0]
+            para['eval_cols']+= para['vect']['vect_cols']
+            
    
     if para['arch'] == 2:
-        para['trainCols1'] = para['cols'] + ['RTag']
-        para['trainCols2'] = para['cols'] + ['RTag', 'ETag']
-        para['testCols1']  = para['cols']
-        para['testCols2']  = para['cols'] + ["RTag"]
+        para['tag_cols1'] = ['RTag']
+        para['tag_cols2'] = ['RTag', 'ETag']
+        para['eval_cols'] = para['cols'].copy() + ['RTag']
 
         para['trainDataPath1'] = para['path'] + '/output/trainData1.txt'
         para['trainDataPath2'] = para['path'] + '/output/trainData2.txt'
@@ -68,11 +86,13 @@ def genPara(modelLabel):
         para['modelPath1'] = para['path'] + '/model1'
         para['modelPath2'] = para['path'] + '/model2'
         para['evalTag']   = 'ETag'
-        para['template1'] = templatePath[len(para['testCols1'])][0]
-        para['template2'] = templatePath[len(para['testCols2'])][0]
-    
+        para['template1'] = templatePath[len(para['cols'])][0]
+        para['template2'] = templatePath[len(para['cols']) + 1][0]
+        if vect:
+            para['template'] = templatePath['v'][0]
+            para['eval_cols']= para['cols'].copy()  + para['vect']['vect_cols'] + ['RTag']
+        
     return para
-
 
 
 def trainModel(para, pklDictPath):
@@ -86,14 +106,16 @@ def trainModel(para, pklDictPath):
     cctTrain, cctTest = loadData(pklDictPath, 10)
     if para['arch'] == 1:
         print('Loading Train Data\n')
-        getTrainData(cctTrain,cols = para['trainCols'], Path = para['trainDataPath'])
+        getTrainData(cctTrain, attr_cols = para['cols'], tag_cols = para['tag_cols'], Path = para['trainDataPath'],
+                     **para['vect'])
+        
+        
         print('Loading Test Data\n')
-        getTestData(cctTest,  cols = para['testCols'],  Path = para['testDataPath'])
-
+        getTestData(cctTest,  attr_cols = para['cols'], Path = para['testDataPath'], **para['vect'])
         
         print('Start Learning ... \n')
         btime = time.clock()
-        crf_learn(crf_learn_path = para['learnPath'],
+        crf_learn(crf_learn_path = para['crf_learnPath'],
                   params         = para['crfPara'],
                   templatepath   = para['template'],
                   trainpath      = para['trainDataPath'],
@@ -104,22 +126,20 @@ def trainModel(para, pklDictPath):
 
         print('Start Predicting ... ')
         btime = time.clock()
-        crf_test(crf_test_path = para['testPath'],
+        crf_test(crf_test_path = para['crf_testPath'],
                  modelpath     = para['modelPath'],
                  testfilepath  = para['testDataPath'],
                  resultpath    = para['testDataResultPath'])
         etime = time.clock()
         print('Time Consumption:', etime - btime,'s\n')
-
+        #'''
         print('Evaluating ... ')
         btime = time.clock()
-        R = evalPerform(cctTest, para['testDataResultPath'], para['evalTag'], para['testCols'])
-
+        R = evalPerform(cctTest, para['testDataResultPath'], para['evalTag'], para['eval_cols'], logPath = para['logPath'])
         '''
         with open('test/problem.p', 'wb') as handle:
             pickle.dump([cctTrain, cctTest , para], handle)
         '''
-
         R = R.dropna()
         print(R)
         R.to_csv(para['performPath'], sep = '\t')
@@ -133,23 +153,24 @@ def trainModel(para, pklDictPath):
 
 
     if para['arch'] == 2:
+        
         print('Loading  Train Data 1')
-        getTrainData(cctTrain, cols = para['trainCols1'], Path = para['trainDataPath1'])
+        getTrainData(cctTrain, attr_cols = para['cols'], tag_cols = para['tag_cols1'], Path = para['trainDataPath1'])
         print('Finished Train Data 1\n')
 
         print('Loading  Train Data 2')
-        getTrainData(cctTrain, cols = para['trainCols2'], Path = para['trainDataPath2'])
+        getTrainData(cctTrain, attr_cols = para['cols'], tag_cols = para['tag_cols2'], Path = para['trainDataPath2'])
         print('Finished Train Data 2\n')
 
         
         print('Loading  Test Data 1')
-        getTestData(cctTest,  cols = para['testCols1'],  Path = para['testDataPath1'])
+        getTestData(cctTest,  attr_cols = para['cols'],  Path = para['testDataPath1'])
         print('Finished Test Data 1\n')
 
         
         print('Start  Learning -1- ... \n')
         btime = time.clock()
-        crf_learn(crf_learn_path = para['learnPath'],
+        crf_learn(crf_learn_path = para['crf_learnPath'],
                   params         = para['crfPara'],
                   templatepath   = para['template1'],
                   trainpath      = para['trainDataPath1'],
@@ -160,22 +181,20 @@ def trainModel(para, pklDictPath):
         
         print('Start Predicting -1- ... ')
         btime = time.clock()
-        crf_test(crf_test_path = para['testPath'],
+        crf_test(crf_test_path = para['crf_testPath'],
                  modelpath     = para['modelPath1'],
                  testfilepath  = para['testDataPath1'],
-                 resultpath    = para['testDataResultPath1'])
+                 resultpath    = para['testDataResultPath1'],
+                 concise       = True)
         etime = time.clock()
         print('Time Consumption:', etime - btime,'s\n')
         
-        
         # results = splitResult(para['testDataResultPath1'])
-        getTestData2(cctTest, cols = para['testCols2'], Path = para['testDataPath2'], resultPath = para['testDataResultPath1'])
-
-
+        getTestData2(para['testDataResultPath1'], para['testDataPath2'])
         
         print('Start  Learning -2- ... \n')
         btime = time.clock()
-        crf_learn(crf_learn_path = para['learnPath'],
+        crf_learn(crf_learn_path = para['crf_learnPath'],
                   params         = para['crfPara'],
                   templatepath   = para['template2'],
                   trainpath      = para['trainDataPath2'],
@@ -186,17 +205,16 @@ def trainModel(para, pklDictPath):
         
         print('Start Predicting -2- ... ')
         btime = time.clock()
-        crf_test(crf_test_path = para['testPath'],
+        crf_test(crf_test_path = para['crf_testPath'],
                  modelpath     = para['modelPath2'],
                  testfilepath  = para['testDataPath2'],
-                 resultpath    = para['testDataResultPath2'])
+                 resultpath    = para['testDataResultPath2'] )
         etime = time.clock()
         print('Time Consumption:', etime - btime,'s\n')
         
-
         print('Evaluating ... ')
         btime = time.clock()
-        R = evalPerform(cctTest, para['testDataResultPath2'], para['evalTag'],  para['testCols2'])
+        R = evalPerform(cctTest, para['testDataResultPath2'], para['evalTag'],  para['eval_cols'], logPath = para['logPath'])
         R = R.dropna()
         print(R)
         R.to_csv(para['performPath'], sep = '\t')
@@ -210,20 +228,28 @@ def trainModel(para, pklDictPath):
 
 
 if __name__ == '__main__':
-    pklDictPath = 'pkldata/2017-11-03/CCT_Dict.p'
+    pklDictPath = 'pkldata/CCKS-2018-04-04/CCT_Dict.p'
 
     parser = optparse.OptionParser()
     parser.add_option("-m", "--model", default='',
                       help="Model Name")
+    parser.add_option("-v", "--vector", default = '',
+                      help='Word2Vector Dim')
+
     opts = parser.parse_args()[0]
 
     modelLabel = opts.model
+    vect       = opts.vector
+    #lstm       = opts.lstm
     # modelLabel = '1abdp'
 
     assert int(modelLabel[0]) == 2 or int(modelLabel[0]) == 1
     assert modelLabel[1] == 'a'
 
-    para = genPara(modelLabel)
+    if vect:
+        assert vect[:5] == 'vect-'
+
+    para = genPara(modelLabel, vect = vect)
 
     trainModel(para, pklDictPath)
 
