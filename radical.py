@@ -18,8 +18,11 @@ headers = {
 }
 
 
+rootPath = '/Users/floyd/Desktop/Research/NER-CRF/cctner/'
+
+
 class Radical(object):
-    dictionary_filepath = 'sources/xinhua.csv'
+    dictionary_filepath = rootPath + 'sources/xinhua.csv'
     baiduhanyu_url = 'http://hanyu.baidu.com/zici/s?ptype=zici&wd=%s'
 
     def __init__(self):
