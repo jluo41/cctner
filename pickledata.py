@@ -62,7 +62,7 @@ parser.add_option(
 
 if __name__ == '__main__':
     opts = parser.parse_args()[0]
-    assert opts.batch in ['ccks', 'luohu', 'luohuA', 'luohuB']
+    assert opts.batch in ['ccks', 'luohu', 'luohuA', 'luohuM']
 
 
     batch = None
