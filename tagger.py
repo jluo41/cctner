@@ -165,7 +165,7 @@ if __name__ == '__main__':
     inputPathFile = opts.input
     outputPathFile = opts.output
 
-    assert opts.batch in ['ccks', 'luohu', 'luohuA', 'luohuB']
+    assert opts.batch in ['ccks', 'luohu', 'luohuA', 'luohuM']
 
     batch = None
     if opts.batch == 'ccks':
