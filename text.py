@@ -174,7 +174,12 @@ class ChineseClinicalText(object):
                 entity = strQ2B(l).replace('\n','').split(sep)
                 if len(entity) != 4:
                     continue
-                entity[-1] = fLabel[entity[-1]]
+                try:
+                    entity[-1] = fLabel[entity[-1]]
+                except:
+                    print(annotedFilePath)
+                    print(entity[-1])
+                    print('  ')
                 entity[1], entity[2] = int(entity[1])-start, int(entity[2])-start
                 annotedEntities.append(entity)
         if eType == 'RTag':
