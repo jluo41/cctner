@@ -257,7 +257,7 @@ if __name__ == '__main__':
         assert vect[:5] == 'vect-'
 
 
-    assert opts.batch in ['ccks', 'luohu', 'luohuA', 'luohuB']
+    assert opts.batch in ['ccks', 'luohu', 'luohuA', 'luohuM']
 
     batch = None
     pklDictPath = None
