@@ -6,28 +6,66 @@ import numpy as np
 from splitresult import splitResult
 
 from vector import cct2VecDF
-from dataset import batch_CCKS, batch_LUOHU, batch_LH_M, batch_LH_A, generateOriAn
+
+from dataset import batch_LUOHU
 
 
-def loadData(pklDictPath, seed, batch):
+
+
+def getCrossValidationIdx(length, cross_num, pad = -1):
+    
+    length_pad = (int(length/cross_num) + 1 ) * cross_num
+    #print(length_pad)
+    new_list = list(range(length)) + [pad] * (length_pad - length)
+    #print(new_list)
+
+    cross_index = np.array(random.sample(new_list, length_pad))
+    #cross_index.sort()
+    return cross_index.reshape((cross_num, -1))
+
+
+
+
+def loadData(pklDictPath, batch, cross_num,  
+             seed = 10,
+             cross_validation = False, 
+             cross_idx = 0,
+             pad = -1):
+
+    random.seed(seed)
+
     with open(pklDictPath, 'rb') as handle:
         cctDict_R = pickle.load(handle)
     
     cctTrain = []
     cctTest  = []
-    n = 0
-    for t in batch['dataInput']['filenames']:
-        n+=1
-        typeCCT_R = cctDict_R[t]
-        random.seed(n*seed)
-        l = random.sample(range(len(typeCCT_R)), int(len(typeCCT_R)*0.75))
-        l.sort()
-        cctTypeTrain = [typeCCT_R[idx] for idx in l]
-        cctTrain.append(cctTypeTrain)
-        cctTypeTest  = [typeCCT_R[idx] for idx in range(len(typeCCT_R)) if idx not in l]
-        cctTest.append(cctTypeTest)
-    return cctTrain, cctTest
 
+    if not cross_validation:
+
+        for t in batch['dataInput']['filenames']:
+            typeCCT = CCTDict[t]
+            random.seed(10)
+            l = random.sample(range(len(typeCCT)), int(len(typeCCT)/cross_num))
+            l.sort()
+            cctTypeTrain = [typeCCT[idx] for idx in l]
+            cctTrain.append(cctTypeTrain)
+            cctTypeTest  = [typeCCT[idx] for idx in range(len(typeCCT)) if idx not in l]
+            cctTest.append(cctTypeTest)
+    else:
+        
+        for t in  batch['dataInput']['filenames']:
+            typeCCT = cctDict_R[t]
+            cross_index = getCrossValidationIdx(len(typeCCT), cross_num, pad = pad)
+            test_index = cross_index[cross_idx, ]
+            test_index = [idx for idx in test_index if idx is not pad] # get rid of pad
+            #l = random.sample(range(len(typeCCT)), int(len(typeCCT)/section_num))
+            #l.sort()
+            cctTypeTest = [typeCCT[idx] for idx in test_index]
+            cctTest.append(cctTypeTest)
+            cctTypeTrain  = [typeCCT[idx] for idx in range(len(typeCCT)) if idx not in test_index]
+            cctTrain.append(cctTypeTrain)
+        
+    return cctTrain, cctTest
 
 
 def getTrainData(cctTrain, attr_cols = None, tag_cols = None,  
@@ -107,9 +145,13 @@ def getTestData2(TempPath,
 if __name__ == '__main__':
     batch =batch_LUOHU
     pklDictPath = 'pkldata/luohu/CCT_Dict.p'
+    cross_num = 10
 
     btime = time.clock()
-    cctTrain, cctTest = loadData(pklDictPath, 1, batch)
+    cctTrain, cctTest = loadData(pklDictPath, batch, cross_num,  
+                                 seed = 10,
+                                 cross_validation = False, 
+                                 cross_idx = 0)
     etime = time.clock()
 
     print(etime - btime)

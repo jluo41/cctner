@@ -7,6 +7,8 @@ from evals import evalPerform
 import pickle
 # from splitresult import splitResult
 from dataset import batch_CCKS, batch_LUOHU, batch_LH_M, batch_LH_A, generateOriAn
+from pprint import pprint
+import pandas as pd
 
 
 attrLable = {}
@@ -18,12 +20,12 @@ attrLable['p'] = 'POSTag'
 attrLable['R'] = 'RTag'
 attrLable['E'] = 'ETag'
 
-def genPara(modelLabel, vect = None, lstm = None, batch = None):
+def genPara(modelLabel, vect = None, lstm = None, batch = None, cross_idx = 0):
     para = {}
     para['arch']  = int(modelLabel[0])
     para['attrs'] = list(modelLabel)[1:]
     para['cols']  = [attrLable[i] for i in para['attrs']]
-    para['path']  = 'models/' + batch['name'] + '/' + modelLabel
+    para['path']  = 'models/' + batch['name'] + '/' + modelLabel + '_' + str(cross_idx)
     para['crf_learnPath'] = 'crftools/crf_learn'
     para['crf_testPath']  = 'crftools/crf_test'
     ## CRF Para
@@ -97,7 +99,11 @@ def genPara(modelLabel, vect = None, lstm = None, batch = None):
     return para
 
 
-def trainModel(para, pklDictPath, batch):
+def trainModel(para, pklDictPath, batch, cross_num, 
+               seed = 10,
+               cross_validation = False, 
+               cross_idx = 0,
+               get_perform = False):
     try:
         os.mkdir(para['path'])
         os.mkdir(para['path']+ '/output')
@@ -105,7 +111,10 @@ def trainModel(para, pklDictPath, batch):
         pass
 
     print('\nLoading Data\n')
-    cctTrain, cctTest = loadData(pklDictPath, 10, batch)
+    cctTrain, cctTest = loadData(pklDictPath, batch, cross_num,
+                                 seed = seed,
+                                 cross_validation = cross_validation,
+                                 cross_idx = cross_idx)
     if para['arch'] == 1:
         print('Loading Train Data\n')
         getTrainData(cctTrain, attr_cols = para['cols'], tag_cols = para['tag_cols'], Path = para['trainDataPath'],
@@ -151,6 +160,9 @@ def trainModel(para, pklDictPath, batch):
 
         with open(para['paraPath'], 'wb') as handle:
             pickle.dump(para, handle)
+
+        if get_perform:
+            return R
 
 
 
@@ -227,6 +239,9 @@ def trainModel(para, pklDictPath, batch):
         with open(para['paraPath'], 'wb') as handle:
             pickle.dump(para, handle)
 
+        if get_perform:
+            return R
+
 
 
 if __name__ == '__main__':
@@ -240,13 +255,20 @@ if __name__ == '__main__':
     parser.add_option("-b", "--batch", default = 'ccks',
                       help='batch')
 
+    parser.add_option("-n", '--cross_num', default = 4)
+
+    parser.add_option("-c", '--cross_validation', default = False)
+
+    parser.add_option("-s", '--seed', default = 10)
+
+
     opts = parser.parse_args()[0]
 
     modelLabel = opts.model
     vect       = opts.vector
 
 
-    #lstm       = opts.lstm
+    # lstm       = opts.lstm
     # modelLabel = '1abdp'
 
     assert int(modelLabel[0]) == 2 or int(modelLabel[0]) == 1
@@ -281,18 +303,46 @@ if __name__ == '__main__':
         pklDictPath = 'pkldata/luohuM/CCT_Dict.p'
         print('Batch LUOHU Miscellany\n')
 
-    else:
-        pass
 
+    if not os.path.isdir('models/'+batch['name']):
+        os.mkdir('models/'+batch['name'])
+
+    pprint(batch)
+    print('\n')
     #print(modelLabel)
     #print(batch)
     #print(pklDictPath)
-    para = genPara(modelLabel, vect = vect, batch = batch)
+    cross_num = int(opts.cross_num)
+    cross_validation = opts.cross_validation
+    seed = int(opts.seed)
     
-    try:
-        os.mkdir('models/'+batch['name'])
-    except:
-        pass
+    if not cross_validation:
+        para = genPara(modelLabel, vect = vect, batch = batch, cross_idx = 0)
+    
+        trainModel(para, pklDictPath, batch, cross_num, 
+                   seed = seed,
+                   cross_validation = cross_validation, 
+                   cross_idx = 0)
 
-    trainModel(para, pklDictPath, batch)
+    else:
+
+        L = []
+
+        for cross_idx in range(cross_num):
+
+            para = genPara(modelLabel, vect = vect, batch = batch, cross_idx = cross_idx)
+
+            R = trainModel(para, pklDictPath, batch, cross_num, 
+                           seed = seed,
+                           cross_validation = cross_validation, 
+                           cross_idx = cross_idx,
+                           get_perform = True)
+            print(R.shape)
+            L.append(R)
+
+        print('\nThe Final Average Performance for', cross_num, 'Cross Validation is:\n')
+        #print(L)
+        Perform = sum(L)
+
+        print(Perform/cross_num)
 
