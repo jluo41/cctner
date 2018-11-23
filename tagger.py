@@ -24,11 +24,11 @@ def tagger(model, inputPathFile, outputPathFile, batch):
     tmp = inputPathFile.split('/')[-1]
     fileName = tmp.split('.')[0]
 
-    parapath = 'models/' + batch['name'] + '/'+ model + '/para.p', 'rb'
+    parapath = 'models/' + batch['name'] + '/'+ model + '/para.p' #  , 'rb'
     if not os.path.isfile(parapath):
-    	parapath = 'models/' + batch['name'] + '/'+ model + '_0/para.p', 'rb'
+    	parapath = 'models/' + batch['name'] + '/'+ model + '_0/para.p' # , 'rb'
     
-    with open(parapath) as handle:
+    with open(parapath, 'rb') as handle:
         para = pickle.load(handle)
 
     if para['arch'] == 1:
