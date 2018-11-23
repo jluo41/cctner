@@ -27,7 +27,7 @@ $ python train.py -m 2abp
 
 
 
-####  Tagger a Text File with a Model
+####  Tag a Text File with a Model
 
 ```Shell
 $ python tagger.py -m 1a-v50 -i demo/input.txt -o demo/output.txt
